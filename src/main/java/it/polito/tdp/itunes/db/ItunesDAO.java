@@ -7,7 +7,11 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
+
 import it.polito.tdp.itunes.model.Album;
+import it.polito.tdp.itunes.model.Arco;
 import it.polito.tdp.itunes.model.Artist;
 import it.polito.tdp.itunes.model.Genre;
 import it.polito.tdp.itunes.model.MediaType;
@@ -130,6 +134,87 @@ public class ItunesDAO {
 
 			while (res.next()) {
 				result.add(new MediaType(res.getInt("MediaTypeId"), res.getString("Name")));
+			}
+			conn.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
+			throw new RuntimeException("SQL Error");
+		}
+		return result;
+	}
+	
+	public List<Album> getVertici(int n){
+		final String sql = "SELECT DISTINCT aa.`AlbumId`, aa.`ArtistId`, aa.`Title` "
+				+ "FROM album aa, `track` t "
+				+ "WHERE aa.`AlbumId`=t.`AlbumId` "
+				+ "GROUP BY aa.`AlbumId` "
+				+ "HAVING sum(t.`UnitPrice`)>? "
+				+ "ORDER BY aa.`Title`";
+		List<Album> result = new LinkedList<>();
+		
+		try {
+			Connection conn = DBConnect.getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+			st.setInt(1, n);
+			ResultSet res = st.executeQuery();
+
+			while (res.next()) {
+				result.add(new Album(res.getInt("AlbumId"), res.getString("Title")));
+			}
+			conn.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
+			throw new RuntimeException("SQL Error");
+		}
+		return result;
+	}
+	
+	public List<Arco> getArchi(int n, Map<Integer, Album> mappa){
+		final String sql = "SELECT j1.`AlbumId` AS a1, j2.`AlbumId`AS a2, abs(j1.peso-j2.peso) AS weight "
+				+ "FROM (SELECT DISTINCT aa.`AlbumId`, sum(t.`UnitPrice`) AS peso "
+				+ "	  FROM album aa, `track` t "
+				+ "	  WHERE aa.`AlbumId`=t.`AlbumId` "
+				+ "	  GROUP BY aa.`AlbumId` "
+				+ "	  HAVING sum(t.`UnitPrice`)>?) AS j1, "
+				+ "	  (SELECT DISTINCT aa.`AlbumId`, sum(t.`UnitPrice`) AS peso "
+				+ "	  FROM album aa, `track` t "
+				+ "	  WHERE aa.`AlbumId`=t.`AlbumId` "
+				+ "	  GROUP BY aa.`AlbumId` "
+				+ "	  HAVING sum(t.`UnitPrice`)>?) AS j2 "
+				+ "WHERE j1.`AlbumId`<j2.`AlbumId` "
+				+ "HAVING weight<>0";
+		List<Arco> result = new LinkedList<>();
+		
+		try {
+			Connection conn = DBConnect.getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+			st.setInt(1, n);
+			st.setInt(2, n);
+			ResultSet res = st.executeQuery();
+
+			while (res.next()) {
+				result.add(new Arco(mappa.get(res.getInt("a1")), mappa.get(res.getInt("a2")),
+						res.getDouble("weight")));
+			}
+			conn.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
+			throw new RuntimeException("SQL Error");
+		}
+		return result;
+	}
+	
+	public Map<Integer, Album> getMappaAlbum(){
+		final String sql = "SELECT * FROM Album";
+		Map<Integer, Album> result = new HashMap<>();
+		
+		try {
+			Connection conn = DBConnect.getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+			ResultSet res = st.executeQuery();
+
+			while (res.next()) {
+				result.put(res.getInt("AlbumId"), new Album(res.getInt("AlbumId"), res.getString("Title")));
 			}
 			conn.close();
 		} catch (SQLException e) {
