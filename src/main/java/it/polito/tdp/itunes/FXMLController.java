@@ -52,6 +52,10 @@ public class FXMLController {
     @FXML // fx:id="txtX"
     private TextField txtX; // Value injected by FXMLLoader
 
+    
+    
+    //controlli standard comboBox
+    
     @FXML
     void doCalcolaAdiacenze(ActionEvent event) {
     	
